@@ -1,30 +1,30 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  Home, 
-  BarChart3, 
-  TestTube, 
-  Shield, 
-  History, 
-  Wallet, 
-  User, 
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  Home,
+  BarChart3,
+  TestTube,
+  Shield,
+  History,
+  Wallet,
+  User,
   LogOut,
-  Zap
-} from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
+  Zap,
+} from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const { logOut } = useAuth();
 
   const navItems = [
-    { icon: Home, label: 'Dashboard', path: '/dashboard' },
-    { icon: Zap, label: 'Hashing Tests', path: '/hashing' },
-    { icon: BarChart3, label: 'Performance', path: '/performance' },
-    { icon: Shield, label: 'Security Tests', path: '/security' },
-    { icon: Wallet, label: 'Wallet', path: '/wallet' },
-    { icon: History, label: 'Transaction History', path: '/history' },
-    { icon: User, label: 'Profile', path: '/profile' },
+    { icon: Home, label: "Dashboard", path: "/dashboard" },
+    { icon: Zap, label: "Hashing Tests", path: "/hashing" },
+    { icon: BarChart3, label: "Performance", path: "/performance" },
+    { icon: Shield, label: "Security Tests", path: "/security" },
+    { icon: Wallet, label: "Wallet", path: "/wallet" },
+    { icon: History, label: "Transaction History", path: "/history" },
+    { icon: User, label: "Profile", path: "/profile" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -52,8 +52,8 @@ const Sidebar: React.FC = () => {
               to={item.path}
               className={`flex items-center space-x-3 px-4 py-3 rounded-lg mb-2 transition-all duration-200 ${
                 isActive(item.path)
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg'
-                  : 'hover:bg-slate-700 hover:shadow-md'
+                  ? "bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg"
+                  : "hover:bg-slate-700 hover:shadow-md"
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -66,7 +66,7 @@ const Sidebar: React.FC = () => {
       <div className="absolute bottom-6 left-4 right-4">
         <button
           onClick={logOut}
-          className="flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left hover:bg-red-600 transition-colors duration-200"
+          className="flex items-center space-x-3 px-4 py-3 rounded-lg mb-2 text-left hover:bg-red-600 transition-colors duration-200"
         >
           <LogOut className="w-5 h-5" />
           <span className="font-medium">Sign Out</span>
