@@ -33,30 +33,30 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  register: (data) => api.post('/auth/register', data),
-  login: (data) => api.post('/auth/login', data),
-  resetPassword: (data) => api.post('/auth/reset-password', data),
+  register: (data: any) => api.post('/auth/register', data),
+  login: (data: any) => api.post('/auth/login', data),
+  resetPassword: (data: any) => api.post('/auth/reset-password', data),
 };
 
 export const userAPI = {
   getProfile: () => api.get('/users/profile'),
-  updateProfile: (data) => api.put('/users/profile', data),
+  updateProfile: (data: any) => api.put('/users/profile', data),
 };
 
-export const transactionAPI = {
-  create: (data) => api.post('/transactions', data),
-  getAll: (params) => api.get('/transactions', { params }),
-  getById: (id) => api.get(`/transactions/${id}`),
+export const transactionAPI:any = {
+  create: (data: any) => api.post('/transactions', data),
+  getAll: (params: any) => api.get('/transactions', { params }),
+  getById: (id: any) => api.get(`/transactions/${id}`),
 };
 
 export const hashingAPI = {
-  test: (data) => api.post('/hashing/test', data),
-  performanceTest: (data) => api.post('/hashing/performance', data),
+  test: (data: any) => api.post('/hashing/test', data),
+  performanceTest: (data: any) => api.post('/hashing/performance', data),
   getTests: () => api.get('/hashing/tests'),
 };
 
 export const securityAPI = {
-  test: (data) => api.post('/security/test', data),
+  test: (data: any) => api.post('/security/test', data),
   getTests: () => api.get('/security/tests'),
 };
 
@@ -64,7 +64,7 @@ export const performanceAPI = {
   getAnalytics: () => api.get('/performance/analytics'),
 };
 
-export const walletAPI = {
+export const walletAPI:any = {
   getWallet: () => api.get('/wallet'),
 };
 

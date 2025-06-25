@@ -7,6 +7,7 @@ import { auth, db } from '../config/firebase.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { WalletUtils } from '../utils/wallet.js';
+import { BlockchainUtils } from '../utils/blockchain.js';
 
 const router = express.Router();
 
@@ -34,6 +35,12 @@ router.post('/register', [
     // Generate wallet
     const wallet = WalletUtils.generateWallet();
 
+    // Register user on blockchain contract
+    const blockchainResult = await BlockchainUtils.registerUserOnContract(email, wallet.address);
+    if (!blockchainResult.success) {
+      console.error('Failed to register user on blockchain:', blockchainResult.error);
+    }
+
     // Save user data to Firestore
     const userData = {
       uid: user.uid,
@@ -41,7 +48,8 @@ router.post('/register', [
       displayName,
       walletAddress: wallet.address,
       createdAt: new Date().toISOString(),
-      isActive: true
+      isActive: true,
+      hasInitialSupply: true
     };
 
     await setDoc(doc(db, 'users', user.uid), userData);
@@ -54,11 +62,11 @@ router.post('/register', [
       createdAt: new Date().toISOString()
     });
 
-    // Generate JWT token
+    // Generate JWT token with 30 minute expiry
     const token = jwt.sign(
       { uid: user.uid, email },
       process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '7d' }
+      { expiresIn: '30m' }
     );
 
     res.status(201).json({
@@ -98,11 +106,11 @@ router.post('/login', [
     const userDoc = await getDoc(doc(db, 'users', user.uid));
     const userData = userDoc.data();
 
-    // Generate JWT token
+    // Generate JWT token with 30 minute expiry
     const token = jwt.sign(
       { uid: user.uid, email },
       process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '7d' }
+      { expiresIn: '30m' }
     );
 
     res.json({

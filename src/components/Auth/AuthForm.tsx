@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, Zap } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Zap, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface AuthFormProps {
@@ -211,6 +211,17 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
                 </Link>
               </p>
             )}
+            
+            {/* Back to Welcome Page */}
+            <div className="pt-4 border-t border-gray-200">
+              <Link 
+                to="/" 
+                className="flex items-center justify-center space-x-2 text-gray-600 hover:text-gray-800 text-sm transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Welcome Page</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

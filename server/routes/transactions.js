@@ -2,38 +2,48 @@ import express from 'express';
 import { collection, addDoc, query, where, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { v4 as uuidv4 } from 'uuid';
 import { HashingUtils } from '../utils/hashing.js';
+import { BlockchainUtils } from '../utils/blockchain.js';
 
 const router = express.Router();
 
-// Create transaction
+// Create transaction by email
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { to, amount, hashingMethod = 'SHA512' } = req.body;
+    const { toEmail, amount, hashingMethod = 'SHA512' } = req.body;
 
-    if (!to || !amount) {
+    if (!toEmail || !amount) {
       return res.status(400).json({
         success: false,
-        message: 'Recipient address and amount are required'
+        message: 'Recipient email and amount are required'
       });
     }
 
-    // Get user wallet address
-    const userDoc = await getDoc(doc(db, 'users', req.user.uid));
-    const userData = userDoc.data();
+    // Get sender's wallet data
+    const walletDoc = await getDoc(doc(db, 'wallets', req.user.uid));
+    const walletData = walletDoc.data();
 
-    if (!userData?.walletAddress) {
+    if (!walletData?.privateKey) {
       return res.status(400).json({
         success: false,
-        message: 'User wallet not found'
+        message: 'Sender wallet not found'
       });
     }
 
-    // Create transaction data
+    // Check if recipient email exists
+    const recipientAddress = await BlockchainUtils.getAddressByEmail(toEmail);
+    if (!recipientAddress) {
+      return res.status(400).json({
+        success: false,
+        message: 'Recipient email not found'
+      });
+    }
+
+    // Create transaction data for hashing
     const transactionData = {
-      from: userData.walletAddress,
-      to,
+      from: walletData.address,
+      to: recipientAddress,
+      toEmail,
       amount: parseFloat(amount),
       hashingMethod,
       status: 'pending',
@@ -56,16 +66,34 @@ router.post('/', authMiddleware, async (req, res) => {
         hashResult = await HashingUtils.sha512Hash(dataToHash);
     }
 
+    // Execute blockchain transaction
+    const blockchainResult = await BlockchainUtils.transferByEmail(
+      walletData.privateKey,
+      toEmail,
+      amount,
+      hashingMethod,
+      hashResult.hash,
+      Math.round(hashResult.time)
+    );
+
+    if (!blockchainResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: blockchainResult.error || 'Transaction failed'
+      });
+    }
+
     transactionData.hash = hashResult.hash;
     transactionData.executionTime = hashResult.time;
     transactionData.status = 'confirmed';
+    transactionData.blockchainTxHash = blockchainResult.txHash;
 
     // Save to Firestore
     const docRef = await addDoc(collection(db, 'transactions'), transactionData);
 
     res.status(201).json({
       success: true,
-      message: 'Transaction created successfully',
+      message: 'Transaction sent successfully',
       transaction: {
         id: docRef.id,
         ...transactionData
@@ -86,6 +114,24 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
     
+    // Get user's wallet address
+    const userDoc = await getDoc(doc(db, 'users', req.user.uid));
+    const userData = userDoc.data();
+
+    if (!userData?.walletAddress) {
+      return res.json({
+        success: true,
+        transactions: [],
+        total: 0,
+        page: parseInt(page),
+        totalPages: 0
+      });
+    }
+
+    // Get blockchain transaction history
+    const blockchainTxs = await BlockchainUtils.getTransactionHistory(userData.walletAddress);
+
+    // Get Firestore transactions for additional data
     const q = query(
       collection(db, 'transactions'),
       where('userId', '==', req.user.uid),
@@ -93,26 +139,44 @@ router.get('/', authMiddleware, async (req, res) => {
     );
 
     const querySnapshot = await getDocs(q);
-    const transactions = [];
+    const firestoreTxs = [];
 
     querySnapshot.forEach((doc) => {
-      transactions.push({
+      firestoreTxs.push({
         id: doc.id,
         ...doc.data()
       });
     });
 
+    // Merge blockchain and Firestore data
+    const allTransactions = blockchainTxs.map(blockchainTx => {
+      const firestoreTx = firestoreTxs.find(tx => tx.hash === blockchainTx.transactionHash);
+      return {
+        id: firestoreTx?.id || blockchainTx.txHash,
+        from: blockchainTx.from,
+        to: blockchainTx.to,
+        amount: blockchainTx.amount,
+        hashingMethod: blockchainTx.hashMethod,
+        hash: blockchainTx.transactionHash,
+        executionTime: blockchainTx.executionTime,
+        status: 'confirmed',
+        createdAt: firestoreTx?.createdAt || new Date().toISOString(),
+        blockchainTxHash: blockchainTx.txHash,
+        toEmail: firestoreTx?.toEmail || ''
+      };
+    });
+
     // Simple pagination
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + parseInt(limit);
-    const paginatedTransactions = transactions.slice(startIndex, endIndex);
+    const paginatedTransactions = allTransactions.slice(startIndex, endIndex);
 
     res.json({
       success: true,
       transactions: paginatedTransactions,
-      total: transactions.length,
+      total: allTransactions.length,
       page: parseInt(page),
-      totalPages: Math.ceil(transactions.length / limit)
+      totalPages: Math.ceil(allTransactions.length / limit)
     });
 
   } catch (error) {

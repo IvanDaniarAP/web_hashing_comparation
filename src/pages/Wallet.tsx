@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, Send, Copy, ExternalLink, Plus, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
-import { walletAPI, transactionAPI } from '../services/api';
+import { Wallet, Send, Copy, ExternalLink, Plus, ArrowUpRight, ArrowDownLeft, Mail } from 'lucide-react';
+import { walletAPI, transactionAPI } from '../services/api'
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 
@@ -10,7 +10,7 @@ const WalletPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendForm, setSendForm] = useState({
-    to: '',
+    toEmail: '',
     amount: '',
     hashingMethod: 'SHA512' as 'SHA512' | 'BLAKE3' | 'SHA512+BLAKE3'
   });
@@ -57,15 +57,22 @@ const WalletPage: React.FC = () => {
   const handleSendTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!sendForm.to || !sendForm.amount) {
+    if (!sendForm.toEmail || !sendForm.amount) {
       toast.error('Please fill in all fields');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(sendForm.toEmail)) {
+      toast.error('Please enter a valid email address');
       return;
     }
 
     setSending(true);
     try {
       const response = await transactionAPI.create({
-        to: sendForm.to,
+        toEmail: sendForm.toEmail,
         amount: parseFloat(sendForm.amount),
         hashingMethod: sendForm.hashingMethod
       });
@@ -73,7 +80,7 @@ const WalletPage: React.FC = () => {
       if (response.data.success) {
         toast.success('Transaction sent successfully!');
         setShowSendModal(false);
-        setSendForm({ to: '', amount: '', hashingMethod: 'SHA512' });
+        setSendForm({ toEmail: '', amount: '', hashingMethod: 'SHA512' });
         loadRecentTransactions();
         loadWalletData(); // Refresh balance
       }
@@ -98,7 +105,7 @@ const WalletPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Wallet</h1>
           <p className="text-gray-600 mt-2">
-            Manage your cryptocurrency wallet and transactions
+            Manage your SUSD stable coin wallet and transactions
           </p>
         </div>
         <button
@@ -106,32 +113,32 @@ const WalletPage: React.FC = () => {
           className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
         >
           <Send className="w-4 h-4" />
-          <span>Send Transaction</span>
+          <span>Send SUSD</span>
         </button>
       </div>
 
       {/* Wallet Overview */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl text-white p-6">
+      <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl text-white p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
               <Wallet className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold">Your Wallet</h2>
-              <p className="text-blue-100">Ethereum Mainnet</p>
+              <h2 className="text-xl font-semibold">Your SUSD Wallet</h2>
+              <p className="text-green-100">Stable USD Token</p>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold">{wallet?.balance?.eth || '0.0000'} ETH</div>
-            <div className="text-blue-100">${wallet?.balance?.usd || '0.00'} USD</div>
+            <div className="text-3xl font-bold">{wallet?.balance?.susd || '0.0000'} SUSD</div>
+            <div className="text-green-100">${wallet?.balance?.usd || '0.00'} USD</div>
           </div>
         </div>
 
         <div className="bg-white/10 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-100 text-sm">Wallet Address</p>
+              <p className="text-green-100 text-sm">Wallet Address</p>
               <p className="font-mono text-sm">{wallet?.address || 'Loading...'}</p>
             </div>
             <div className="flex space-x-2">
@@ -158,8 +165,8 @@ const WalletPage: React.FC = () => {
           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
             <Send className="w-6 h-6 text-blue-600" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Send</h3>
-          <p className="text-gray-600 text-sm">Send cryptocurrency to another address</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Send SUSD</h3>
+          <p className="text-gray-600 text-sm">Send stable coins to another user by email</p>
         </button>
 
         <button className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200 text-left">
@@ -167,7 +174,7 @@ const WalletPage: React.FC = () => {
             <Plus className="w-6 h-6 text-green-600" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Receive</h3>
-          <p className="text-gray-600 text-sm">Get your address to receive payments</p>
+          <p className="text-gray-600 text-sm">Share your email to receive SUSD payments</p>
         </button>
 
         <button className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200 text-left">
@@ -175,7 +182,7 @@ const WalletPage: React.FC = () => {
             <ExternalLink className="w-6 h-6 text-purple-600" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Explorer</h3>
-          <p className="text-gray-600 text-sm">View on blockchain explorer</p>
+          <p className="text-gray-600 text-sm">View transactions on blockchain explorer</p>
         </button>
       </div>
 
@@ -206,10 +213,13 @@ const WalletPage: React.FC = () => {
                     <div className="font-medium text-gray-900">
                       {transaction.from === wallet?.address ? 'Sent' : 'Received'}
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {transaction.from === wallet?.address ? 
-                        `To ${transaction.to.substring(0, 10)}...` :
-                        `From ${transaction.from.substring(0, 10)}...`
+                    <div className="text-sm text-gray-500 flex items-center">
+                      <Mail className="w-3 h-3 mr-1" />
+                      {transaction.toEmail || 
+                        (transaction.from === wallet?.address ? 
+                          `To ${transaction.to.substring(0, 10)}...` :
+                          `From ${transaction.from.substring(0, 10)}...`
+                        )
                       }
                     </div>
                   </div>
@@ -218,7 +228,7 @@ const WalletPage: React.FC = () => {
                   <div className={`font-medium ${
                     transaction.from === wallet?.address ? 'text-red-600' : 'text-green-600'
                   }`}>
-                    {transaction.from === wallet?.address ? '-' : '+'}{transaction.amount} ETH
+                    {transaction.from === wallet?.address ? '-' : '+'}{transaction.amount} SUSD
                   </div>
                   <div className="text-sm text-gray-500">
                     {transaction.hashingMethod}
@@ -241,7 +251,7 @@ const WalletPage: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">Send Transaction</h3>
+              <h3 className="text-xl font-semibold text-gray-900">Send SUSD</h3>
               <button
                 onClick={() => setShowSendModal(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -253,21 +263,24 @@ const WalletPage: React.FC = () => {
             <form onSubmit={handleSendTransaction} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Recipient Address
+                  Recipient Email
                 </label>
-                <input
-                  type="text"
-                  value={sendForm.to}
-                  onChange={(e) => setSendForm({ ...sendForm, to: e.target.value })}
-                  placeholder="0x..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+                <div className="relative">
+                  <Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="email"
+                    value={sendForm.toEmail}
+                    onChange={(e) => setSendForm({ ...sendForm, toEmail: e.target.value })}
+                    placeholder="recipient@example.com"
+                    className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Amount (ETH)
+                  Amount (SUSD)
                 </label>
                 <input
                   type="number"
@@ -308,7 +321,7 @@ const WalletPage: React.FC = () => {
                   disabled={sending}
                   className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 transition-all duration-200"
                 >
-                  {sending ? 'Sending...' : 'Send'}
+                  {sending ? 'Sending...' : 'Send SUSD'}
                 </button>
               </div>
             </form>
