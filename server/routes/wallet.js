@@ -1,48 +1,45 @@
-import { ethers } from 'ethers';
-import { alchemy } from '../config/alchemy.js';
+import express from 'express';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebase.js';
+import { authMiddleware } from '../middleware/auth.js';
+import { BlockchainUtils } from '../utils/blockchain.js';
 
-export class WalletUtils {
-  static generateWallet() {
-    const wallet = ethers.Wallet.createRandom();
-    return {
-      address: wallet.address,
-      privateKey: wallet.privateKey,
-      mnemonic: wallet.mnemonic?.phrase || ''
-    };
-  }
+const router = express.Router();
 
-  static async getBalance(address) {
-    try {
-      // Get ETH balance using Alchemy
-      const balance = await alchemy.core.getBalance(address, 'latest');
-      const ethBalance = ethers.formatEther(balance);
-      
-      // Mock USD conversion (in production, use real price API)
-      const ethToUsd = 2000; // Mock ETH price
-      const usdBalance = (parseFloat(ethBalance) * ethToUsd).toFixed(2);
-      
-      return {
-        eth: parseFloat(ethBalance).toFixed(4),
-        usd: usdBalance
-      };
-    } catch (error) {
-      console.error('Balance fetch error:', error);
-      return { eth: '0.0000', usd: '0.00' };
-    }
-  }
+// Get wallet info
+router.get('/', authMiddleware, async (req, res) => {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', req.user.uid));
+    const userData = userDoc.data();
 
-  static async getTransactionHistory(address) {
-    try {
-      const history = await alchemy.core.getAssetTransfers({
-        fromAddress: address,
-        category: ['external', 'internal', 'erc20', 'erc721', 'erc1155'],
-        maxCount: 100
+    if (!userData?.walletAddress) {
+      return res.status(404).json({
+        success: false,
+        message: 'Wallet not found'
       });
-      
-      return history.transfers;
-    } catch (error) {
-      console.error('Transaction history error:', error);
-      return [];
     }
+
+    // Get SUSD balance from blockchain
+    const susdBalance = await BlockchainUtils.getBalance(userData.walletAddress);
+
+    res.json({
+      success: true,
+      wallet: {
+        address: userData.walletAddress,
+        balance: {
+          susd: parseFloat(susdBalance).toFixed(4),
+          usd: (parseFloat(susdBalance) * 1).toFixed(2) // SUSD is pegged to USD
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get wallet error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get wallet information'
+    });
   }
-}
+});
+
+export default router;

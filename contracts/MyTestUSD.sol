@@ -3,9 +3,8 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract MyTestUSD is ERC20, Ownable, ReentrancyGuard {
+contract MyTestUSD is ERC20, Ownable {
     uint256 public constant INITIAL_SUPPLY = 100 * 10**18; // 100 SUSD per user
     
     mapping(address => bool) public hasReceivedInitialSupply;
@@ -22,7 +21,7 @@ contract MyTestUSD is ERC20, Ownable, ReentrancyGuard {
         uint256 executionTime
     );
     
-    constructor() ERC20("Stable USD", "SUSD") {}
+    constructor() ERC20("Stable USD", "SUSD") Ownable(msg.sender) {}
     
     function registerUser(string memory email, address userAddress) external onlyOwner {
         require(bytes(email).length > 0, "Email cannot be empty");
@@ -55,7 +54,7 @@ contract MyTestUSD is ERC20, Ownable, ReentrancyGuard {
         string memory hashMethod,
         string memory transactionHash,
         uint256 executionTime
-    ) external nonReentrant {
+    ) external {
         address toAddress = emailToAddress[toEmail];
         require(toAddress != address(0), "Email not registered");
         require(amount > 0, "Amount must be greater than 0");
